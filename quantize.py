@@ -1,10 +1,14 @@
 from functools import partial
 import torch
 from torch import nn
-from transformers.models.llama.modeling_llama import (
-        LlamaAttention,
-        LlamaMLP,
+from transformers.models.opt.modeling_opt import (
+        OPTAttention,
+        OPTDecoderLayer,
     )
+from transformers.models.llama.modeling_llama import (
+    LlamaAttention,
+    LlamaMLP,
+)
 
 # core quantization method (simulated quantization)
 def pseudo_quantize_tensor(w, n_bit=4, q_group_size=-1):
@@ -203,6 +207,75 @@ class WALinear(nn.Module):
 
     def __repr__(self):
         return f"WALinear({self.n_bits}, {self.in_features}, {self.out_features}, bias={self.bias is not None}, weight_quant={self.weight_quant_name}, act_quant={self.act_quant_name}, output_quant={self.output_quant_name})"
+
+
+def quantize_opt(
+    model,
+    n_bits,
+    weight_quant="per_tensor",
+    act_quant="per_tensor",
+    quantize_bmm_input=True,
+    group_size=-1,
+):
+    for _, m in model.model.named_modules():
+        if isinstance(m, OPTDecoderLayer):
+            m.fc1 = WALinear.from_float(
+                n_bits,
+                m.fc1,
+                weight_quant=weight_quant,
+                act_quant=act_quant,
+                group_size=group_size,
+            )
+            m.fc2 = WALinear.from_float(
+                n_bits,
+                m.fc2,
+                weight_quant=weight_quant,
+                act_quant=act_quant,
+                group_size=group_size,
+            )
+        elif isinstance(m, OPTAttention):
+            # Here we simulate quantizing BMM inputs by quantizing the
+            # output of q_proj, k_proj, v_proj
+            m.q_proj = WALinear.from_float(
+                n_bits,
+                m.q_proj,
+                weight_quant=weight_quant,
+                act_quant=act_quant,
+                quantize_output=quantize_bmm_input,
+                group_size=group_size,
+            )
+            m.k_proj = WALinear.from_float(
+                n_bits,
+                m.k_proj,
+                weight_quant=weight_quant,
+                act_quant=act_quant,
+                quantize_output=quantize_bmm_input,
+                group_size=group_size,
+            )
+            m.v_proj = WALinear.from_float(
+                n_bits,
+                m.v_proj,
+                weight_quant=weight_quant,
+                act_quant=act_quant,
+                quantize_output=quantize_bmm_input,
+                group_size=group_size,
+            )
+            m.out_proj = WALinear.from_float(
+                n_bits,
+                m.out_proj,
+                weight_quant=weight_quant,
+                act_quant=act_quant,
+                group_size=group_size,
+            )
+    model.lm_head = WALinear.from_float(
+        n_bits,
+        model.lm_head,
+        weight_quant=weight_quant,
+        act_quant=act_quant,
+        quantize_output=quantize_bmm_input,
+        group_size=group_size,
+    )
+    return model
 
 
 def quantize_llama(
