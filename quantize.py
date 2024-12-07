@@ -273,7 +273,7 @@ def quantize_opt(
         model.lm_head,
         weight_quant=weight_quant,
         act_quant=act_quant,
-        quantize_output=quantize_bmm_input,
+        quantize_output=False,
         group_size=group_size,
     )
     return model
@@ -349,7 +349,7 @@ def quantize_llama(
         model.lm_head,
         weight_quant=weight_quant,
         act_quant=act_quant,
-        quantize_output=quantize_bmm_input,
+        quantize_output=False,
         group_size=group_size,
     )
     return model
