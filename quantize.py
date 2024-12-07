@@ -92,8 +92,8 @@ def quantize_activation_per_tensor_absmax(t, n_bits=4):
 
 
 @torch.no_grad()
-def quantize_activation_per_group(t, n_bits=4):
-    return pseudo_quantize_tensor(t, n_bits, q_group_size=128)
+def quantize_activation_per_group(t, n_bits=4, group_size=128):
+    return pseudo_quantize_tensor(t, n_bits, q_group_size=group_size)
 
 
 class WALinear(nn.Module):
@@ -104,6 +104,7 @@ class WALinear(nn.Module):
         out_features,
         bias=True,
         act_quant="per_token",
+        a_group_size=-1,
         quantize_output=False,
     ):
         super().__init__()
@@ -142,7 +143,7 @@ class WALinear(nn.Module):
             )
         elif act_quant == "per_group":
             self.act_quant_name = "per_group"
-            self.act_quant = partial(quantize_activation_per_group, n_bits=n_bits)
+            self.act_quant = partial(quantize_activation_per_group, n_bits=n_bits, group_size=a_group_size)
         else:
             raise ValueError(f"Invalid act_quant: {act_quant}")
 
@@ -164,8 +165,7 @@ class WALinear(nn.Module):
     def forward(self, x):
         q_x = self.act_quant(x)
         y = torch.functional.F.linear(q_x, self.weight, self.bias)
-        q_y = y
-        # q_y = self.output_quant(y)
+        q_y = self.output_quant(y)
         return q_y
 
     @staticmethod
@@ -184,6 +184,7 @@ class WALinear(nn.Module):
             module.out_features,
             module.bias is not None,
             act_quant=act_quant,
+            a_group_size=group_size,
             quantize_output=quantize_output,
         )
         if weight_quant == "per_channel":
