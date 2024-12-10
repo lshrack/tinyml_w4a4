@@ -144,6 +144,9 @@ class WALinear(nn.Module):
         elif act_quant == "per_group":
             self.act_quant_name = "per_group"
             self.act_quant = partial(quantize_activation_per_group, n_bits=n_bits, group_size=a_group_size)
+        elif act_quant == "no_act_quant":
+            self.act_quant_name = "no_act_quant"
+            self.act_quant = lambda x: x
         else:
             raise ValueError(f"Invalid act_quant: {act_quant}")
 
