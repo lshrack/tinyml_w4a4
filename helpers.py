@@ -54,37 +54,3 @@ def get_calib_dataset(tokenizer=None, n_samples=256, block_size=512):
     return [
         cat_samples[:, i * block_size : (i + 1) * block_size] for i in range(n_split)
     ]
-
-
-@torch.no_grad()
-def get_calib_feat(model, tokenizer):
-    input_dict = dict()
-
-    def stat_input_max_hook(m, x, y, name):
-        if isinstance(x, tuple):
-            x = x[0]
-        x_max = x.view(-1, x.shape[-1]).abs().mean(dim=0).cpu().detach()
-        if name not in input_dict:
-            input_dict[name] = [x_max]
-        else:
-            input_dict[name] += [x_max]
-
-    hooks = []
-    for name, m in model.named_modules():
-        if isinstance(m, nn.Linear):
-            hooks.append(
-                m.register_forward_hook(partial(stat_input_max_hook, name=name))
-            )
-
-    print("Collecting activation scales...")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    samples = get_calib_dataset(tokenizer)
-    pbar = tqdm.tqdm(samples)
-    for input_ids in pbar:
-        input_ids = input_ids.to(device)
-        model(input_ids)
-
-    for hook in hooks:
-        hook.remove()
-    return input_dict
