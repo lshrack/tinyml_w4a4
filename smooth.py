@@ -48,3 +48,25 @@ def smooth_lm(model, scales, alpha=0.5):
           fc1 = module.fc1
           fc1_input_scales = scales[name + ".fc1"]
           smooth_ln_fcs(ffn_ln, fc1, fc1_input_scales, alpha)
+
+# smoothing with different alphas for attn vs fc 
+# alpha=-1 to not smooth
+@torch.no_grad()
+def smooth_lm_two_alphas(model, scales, alpha_qkv=0.5, alpha_fc=0.5):
+    for name, module in model.named_modules():
+        if isinstance(module, OPTDecoderLayer):
+          attn_ln = module.self_attn_layer_norm
+          qkv = [
+              module.self_attn.q_proj,
+              module.self_attn.k_proj,
+              module.self_attn.v_proj,
+          ]
+          qkv_input_scales = scales[name + ".self_attn.q_proj"]
+          if alpha_qkv > 0:
+            smooth_ln_fcs(attn_ln, qkv, qkv_input_scales, alpha_qkv)
+
+          ffn_ln = module.final_layer_norm
+          fc1 = module.fc1
+          fc1_input_scales = scales[name + ".fc1"]
+          if alpha_fc > 0:
+            smooth_ln_fcs(ffn_ln, fc1, fc1_input_scales, alpha_fc)
