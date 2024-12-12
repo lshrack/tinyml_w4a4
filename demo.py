@@ -37,7 +37,7 @@ def baseline_experiments(model_type="opt", group_sizes=[128, 64, 32, 16]):
             raise Exception("unrecognized model type")
     
         model_perplexity = evaluate(model, tokenizer)
-        print(f"\nmodel perplexity: {model_perplexity:.2f}")
+        print(f"\nModel perplexity with group size {group_size}: {model_perplexity:.2f}")
 
 if __name__ == "__main__":
-    print("Hello, world!")
+    baseline_experiments()
