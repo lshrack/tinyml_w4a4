@@ -17,9 +17,6 @@ def baseline_experiments(model_type="opt", group_sizes=[128, 64, 32, 16]):
     else:
         raise Exception("unrecognized model type")
     
-    model = AutoModelForCausalLM.from_pretrained(
-            model_path, torch_dtype=torch.float16, device_map="auto"
-        )
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
 
     for group_size in group_sizes:
@@ -28,6 +25,10 @@ def baseline_experiments(model_type="opt", group_sizes=[128, 64, 32, 16]):
             gc.collect()
             torch.cuda.empty_cache()
         except: pass
+
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, torch_dtype=torch.float16, device_map="auto"
+        )
 
         if model_type == 'opt':
             quantize_opt(model, 4, weight_quant="per_group", act_quant="per_group", group_size=group_size)
