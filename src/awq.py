@@ -3,7 +3,7 @@ from torch import nn
 from transformers.models.opt.modeling_opt import OPTDecoderLayer
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 
-from quantize import pseudo_quantize_tensor
+from src.quantize import pseudo_quantize_tensor
 
 @torch.no_grad()
 def scale_ln_fcs(ln, fcs, scales):
