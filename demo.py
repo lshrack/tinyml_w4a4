@@ -36,7 +36,7 @@ def baseline_experiments(model_path, tokenizer, group_sizes=[128, 64, 32, 16]):
         quantize(model, 4, weight_quant="per_group", act_quant="per_group", group_size=group_size)
 
         model_perplexity = evaluate(model, tokenizer)
-        print(f"\nModel perplexity with group size {group_size}: {model_perplexity:.2f}")
+        print(f"\nBaseline model perplexity with group size {group_size}: {model_perplexity:.2f}")
 
 def smoothquant(model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16]):
     print("Evaluating group W4A4 quantization with SmoothQuant:")
@@ -59,14 +59,14 @@ def smoothquant(model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16]):
         quantize(model, 4, weight_quant="per_group", act_quant="per_group", group_size=group_size)
 
         model_perplexity = evaluate(model, tokenizer)
-        print(f"\nModel perplexity with group size {group_size}: {model_perplexity:.2f}")
+        print(f"\nModel perplexity with SmoothQuant and group size {group_size}: {model_perplexity:.2f}")
     
     del act_scales
     gc.collect()
     torch.cuda.empty_cache()
 
 def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], a_bit = 4):
-    print(f'Evaluating group W4A{a_bit} quantization with SmoothQuant:')
+    print(f'Evaluating group W4A{a_bit} quantization with AWQ:')
     model = AutoModelForCausalLM.from_pretrained(
             model_path, torch_dtype=torch.float16, device_map="auto"
         )
@@ -87,7 +87,7 @@ def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], a_bit = 4):
         quantize(model, 4, weight_quant="per_group", act_quant="per_group", group_size=group_size)
 
         model_perplexity = evaluate(model, tokenizer)
-        print(f"\nModel perplexity with group size {group_size}: {model_perplexity:.2f}")
+        print(f"\nModel perplexity with AWQ and group size {group_size}: {model_perplexity:.2f}")
     
     del input_feat
     gc.collect()
@@ -96,6 +96,7 @@ def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], a_bit = 4):
 if __name__ == "__main__":
     model_type = get_input(['opt', 'llama'], "model")
     method_choice = get_input(['naive', 'smoothquant', 'awq', 'all'], "W4A4 quantization method")
+    group_size = get_input(['128', '64', '32', '16', 'all'], 'group size')
 
     if model_type == "opt":
         model_path = OPT_MODEL_PATH
@@ -106,16 +107,21 @@ if __name__ == "__main__":
     else:
         raise Exception("unrecognized model type")
     
+    if group_size == 'all':
+        group_sizes = [128, 64, 32, 16]
+    else:
+        group_sizes = [int(group_size)]
+    
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
 
     if method_choice in ('naive', 'all'):
-        baseline_experiments(model_path, tokenizer)
+        baseline_experiments(model_path, tokenizer, group_sizes=group_sizes)
     
     if method_choice in ('smoothquant', 'all'):
-        smoothquant(model_path, tokenizer, alpha)
+        smoothquant(model_path, tokenizer, alpha, group_sizes=group_sizes)
 
     if method_choice in ('awq', 'all'):
-        awq(model_path, tokenizer)
+        awq(model_path, tokenizer, group_sizes=group_sizes)
     
 # todo 1 - combine quantize_opt and quantize_llama
 # define model path in main func + pass

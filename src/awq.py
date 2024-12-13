@@ -133,7 +133,6 @@ def auto_scale_block(module, name, w_bit,
       scale_fc_fc(module.fc1, module.fc2, final_scales)
 
     elif isinstance(module, LlamaDecoderLayer):
-      print("scaling llama", name)
       # attention input
       inp = input_feat[name + '.self_attn.q_proj']
       inp = torch.cat([x.unsqueeze(0) for x in inp], dim=0).unsqueeze(0)
@@ -147,8 +146,6 @@ def auto_scale_block(module, name, w_bit,
         inp = torch.cat([x.unsqueeze(0) for x in inp], dim=0)
         final_scales = _search_module_scale(module.self_attn.o_proj, [module.self_attn.o_proj], inp)
         scale_fc_fc(module.self_attn.v_proj, module.self_attn.o_proj, final_scales)
-      else:
-        print("skipping attn out")
 
       # fc1
       inp = input_feat[name + '.mlp.gate_proj']
