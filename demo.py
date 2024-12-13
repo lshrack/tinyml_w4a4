@@ -198,3 +198,5 @@ if __name__ == "__main__":
         results += awq(
             model_path, tokenizer, group_sizes=group_sizes, act_quant="no_act_quant"
         )
+
+    print(results)
