@@ -48,7 +48,7 @@ def baseline_experiments(model_path, tokenizer, group_sizes=[128, 64, 32, 16]):
 
         model_perplexity = evaluate(model, tokenizer)
         group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
-        result += f"\n{group_size_result}"
+        result += f"\n\t{group_size_result}"
         print(f"\nBaseline model perplexity with {group_size_result}")
 
     return result + "\n"
@@ -94,7 +94,7 @@ def smoothquant(
         model_perplexity = evaluate(model, tokenizer)
 
         group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
-        result += f"\n{group_size_result}"
+        result += f"\n\t{group_size_result}"
         print(f"\nModel perplexity with SmoothQuant and {group_size_result}")
 
     del act_scales
@@ -135,7 +135,7 @@ def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], act_quant="per_gro
         )
         model_perplexity = evaluate(model, tokenizer)
         group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
-        result += f"\n{group_size_result}"
+        result += f"\n\t{group_size_result}"
 
         print(f"\nModel perplexity with AWQ and {group_size_result}")
 
