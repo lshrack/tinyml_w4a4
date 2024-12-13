@@ -133,11 +133,10 @@ def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], act_quant="per_gro
             act_quant=act_quant,
             group_size=group_size,
         )
-
+        model_perplexity = evaluate(model, tokenizer)
         group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
         result += f"\n{group_size_result}"
 
-        model_perplexity = evaluate(model, tokenizer)
         print(f"\nModel perplexity with AWQ and {group_size_result}")
 
     del input_feat
