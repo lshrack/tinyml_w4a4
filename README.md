@@ -5,7 +5,7 @@ Demo of OPT-1.3B quantized with SQ-G32, attn only:
 
 https://github.com/user-attachments/assets/3613a577-4fc3-4da2-b77f-9fac85c1031c
 
-To run the demo script, you can run the following lines in a Google Colab notebook:
+To run the demo script, you can run the following lines in a Google Colab notebook (in a runtime with a GPU):
 ```
 %cd /content
 !rm -r tinyml_w4a4
