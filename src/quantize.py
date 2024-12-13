@@ -213,7 +213,7 @@ class WALinear(nn.Module):
         return f"WALinear({self.n_bits}, {self.in_features}, {self.out_features}, bias={self.bias is not None}, weight_quant={self.weight_quant_name}, act_quant={self.act_quant_name}, output_quant={self.output_quant_name})"
 
 
-def quantize_opt(
+def quantize(
     model,
     n_bits,
     weight_quant="per_tensor",
@@ -271,27 +271,7 @@ def quantize_opt(
                 act_quant=act_quant,
                 group_size=group_size,
             )
-    model.lm_head = WALinear.from_float(
-        n_bits,
-        model.lm_head,
-        weight_quant=weight_quant,
-        act_quant=act_quant,
-        quantize_output=False,
-        group_size=group_size,
-    )
-    return model
-
-
-def quantize_llama(
-    model,
-    n_bits,
-    weight_quant="per_tensor",
-    act_quant="per_tensor",
-    quantize_bmm_input=True,
-    group_size=-1,
-):
-    for _, m in model.model.named_modules():
-        if isinstance(m, LlamaMLP):
+        elif isinstance(m, LlamaMLP):
             m.gate_proj = WALinear.from_float(
                 n_bits,
                 m.gate_proj,

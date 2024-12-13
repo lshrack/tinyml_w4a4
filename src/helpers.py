@@ -13,7 +13,7 @@ def evaluate(model, tokenizer):
     nsamples = 40
     model = model.eval()
     nlls = []
-    for i in tqdm.tqdm(range(nsamples), desc="evaluating..."):
+    for i in tqdm.tqdm(range(nsamples), desc="evaluating...", leave=False):
         batch = testenc[:, (i * 2048) : ((i + 1) * 2048)].to(model.device)
         with torch.no_grad():
             lm_logits = model(batch).logits
