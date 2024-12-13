@@ -95,7 +95,7 @@ def smoothquant(
 
         group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
         result += f"\n\t{group_size_result}"
-        print(f"\nModel perplexity with SmoothQuant and {group_size_result}")
+        print(f"\nModel perplexity with {method} and {group_size_result}")
 
     del act_scales
     gc.collect()
