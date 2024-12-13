@@ -14,6 +14,6 @@ To run the demo script, you can run the following lines in a Google Colab notebo
 !./demo.sh
 ```
 
-The script will ask for a HuggingFace token. If running the Llama experiments, this must be set to a HuggingFace token with Llama access (to [this model]([url](https://huggingface.co/meta-llama/Llama-3.2-1B))), but for OPT, this does not need to be correctly set to anything. The script will then ask which model, quantization method or methods, and group sizes you would like to try. The results should look like this (this is for OPT with all quantization methods and a group size of 32):
+The script will ask for a HuggingFace token. If running the Llama experiments, this must be set to a HuggingFace token with Llama access (to [this model](https://huggingface.co/meta-llama/Llama-3.2-1B)), but for OPT, this does not need to be correctly set to anything. The script will then ask which model, quantization method or methods, and group sizes you would like to try. The results should look like this (this is for OPT with all quantization methods and a group size of 32):
 
 
