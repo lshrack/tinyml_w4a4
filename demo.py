@@ -40,6 +40,7 @@ def baseline_experiments(model_path, tokenizer, group_sizes=[128, 64, 32, 16]):
         quantize(
             model,
             4,
+            4,
             weight_quant="per_group",
             act_quant="per_group",
             group_size=group_size,
@@ -52,7 +53,8 @@ def baseline_experiments(model_path, tokenizer, group_sizes=[128, 64, 32, 16]):
 
 
 def smoothquant(model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16], attn_only = False):
-    print("Evaluating group W4A4 quantization with SmoothQuant:")
+    method = "SmoothQuant, smoothing attention layers only" if attn_only else "SmoothQuant"
+    print(f'Evaluating group W4A4 quantization with {method}:')
     model = AutoModelForCausalLM.from_pretrained(
         model_path, torch_dtype=torch.float16, device_map="auto"
     )
@@ -73,9 +75,10 @@ def smoothquant(model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16], att
             smooth_lm_two_alphas(model, act_scales, alpha_qkv=alpha, alpha_fc=-1)
         else:
             smooth_lm(model, act_scales, alpha)
-            
+
         quantize(
             model,
+            4,
             4,
             weight_quant="per_group",
             act_quant="per_group",
@@ -115,6 +118,7 @@ def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], a_bit=4):
         quantize(
             model,
             4,
+            a_bit,
             weight_quant="per_group",
             act_quant="per_group",
             group_size=group_size,
