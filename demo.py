@@ -11,7 +11,7 @@ LLAMA_MODEL_PATH = "meta-llama/Llama-3.2-1B"
 
 def get_input(options, value_name):
     while True:
-        chosen_option = input(f'Please select a {value_name}. Options: {', '.join(options)}')
+        chosen_option = input(f'Please select a {value_name}. Options: {", ".join(options)}\n')
         if chosen_option in options:
             return chosen_option
         else:
