@@ -23,7 +23,8 @@ def get_input(options, value_name):
 
 
 def baseline_experiments(model_path, tokenizer, group_sizes=[128, 64, 32, 16]):
-    print("Evaluating baseline group W4A4 quantization:")
+    result = "baseline group W4A4 quantization:"
+    print(f"Evaluating {result}")
 
     for group_size in group_sizes:
         try:
@@ -40,21 +41,27 @@ def baseline_experiments(model_path, tokenizer, group_sizes=[128, 64, 32, 16]):
         quantize(
             model,
             4,
-            4,
             weight_quant="per_group",
             act_quant="per_group",
             group_size=group_size,
         )
 
         model_perplexity = evaluate(model, tokenizer)
-        print(
-            f"\nBaseline model perplexity with group size {group_size}: {model_perplexity:.2f}"
-        )
+        group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
+        result += f"\n{group_size_result}"
+        print(f"\nBaseline model perplexity with {group_size_result}")
+
+    return result + "\n"
 
 
-def smoothquant(model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16], attn_only = False):
-    method = "SmoothQuant, smoothing attention layers only" if attn_only else "SmoothQuant"
-    print(f'Evaluating group W4A4 quantization with {method}:')
+def smoothquant(
+    model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16], attn_only=False
+):
+    method = (
+        "SmoothQuant, smoothing attention layers only" if attn_only else "SmoothQuant"
+    )
+    result = f"group W4A4 quantization with {method}:"
+    print(f"Evaluating {result}")
     model = AutoModelForCausalLM.from_pretrained(
         model_path, torch_dtype=torch.float16, device_map="auto"
     )
@@ -79,24 +86,28 @@ def smoothquant(model_path, tokenizer, alpha, group_sizes=[128, 64, 32, 16], att
         quantize(
             model,
             4,
-            4,
             weight_quant="per_group",
             act_quant="per_group",
             group_size=group_size,
         )
 
         model_perplexity = evaluate(model, tokenizer)
-        print(
-            f"\nModel perplexity with SmoothQuant and group size {group_size}: {model_perplexity:.2f}"
-        )
+
+        group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
+        result += f"\n{group_size_result}"
+        print(f"\nModel perplexity with SmoothQuant and {group_size_result}")
 
     del act_scales
     gc.collect()
     torch.cuda.empty_cache()
 
+    return result + "\n"
 
-def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], a_bit=4):
-    print(f"Evaluating group W4A{a_bit} quantization with AWQ:")
+
+def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], act_quant="per_group"):
+    a_bit = 16 if act_quant == "no_act_quant" else 4
+    result = f"group W4A{a_bit} quantization with AWQ:"
+    print(f"Evaluating {result}")
     model = AutoModelForCausalLM.from_pretrained(
         model_path, torch_dtype=torch.float16, device_map="auto"
     )
@@ -118,20 +129,22 @@ def awq(model_path, tokenizer, group_sizes=[128, 64, 32, 16], a_bit=4):
         quantize(
             model,
             4,
-            a_bit,
             weight_quant="per_group",
-            act_quant="per_group",
+            act_quant=act_quant,
             group_size=group_size,
         )
 
+        group_size_result = f"group size {group_size}: {model_perplexity:.2f}"
+        result += f"\n{group_size_result}"
+
         model_perplexity = evaluate(model, tokenizer)
-        print(
-            f"\nModel perplexity with AWQ and group size {group_size}: {model_perplexity:.2f}"
-        )
+        print(f"\nModel perplexity with AWQ and {group_size_result}")
 
     del input_feat
     gc.collect()
     torch.cuda.empty_cache()
+
+    return result + "\n"
 
 
 if __name__ == "__main__":
@@ -165,17 +178,23 @@ if __name__ == "__main__":
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
 
+    results = "RESULTS:\n\n"
+
     if method_choice in ("naive", "all"):
-        baseline_experiments(model_path, tokenizer, group_sizes=group_sizes)
+        results += baseline_experiments(model_path, tokenizer, group_sizes=group_sizes)
 
     if method_choice in ("smoothquant_w4a4", "all"):
-        smoothquant(model_path, tokenizer, alpha, group_sizes=group_sizes)
-    
+        results += smoothquant(model_path, tokenizer, alpha, group_sizes=group_sizes)
+
     if method_choice in ("smoothquant_w4a4_attn_only", "all"):
-        smoothquant(model_path, tokenizer, alpha, group_sizes=group_sizes, attn_only=True)
+        results += smoothquant(
+            model_path, tokenizer, alpha, group_sizes=group_sizes, attn_only=True
+        )
 
     if method_choice in ("awq_w4a4", "all"):
-        awq(model_path, tokenizer, group_sizes=group_sizes, a_bit=4)
-    
+        results += awq(model_path, tokenizer, group_sizes=group_sizes)
+
     if method_choice in ("awq_w4a16", "all"):
-        awq(model_path, tokenizer, group_sizes=group_sizes, a_bit=16)
+        results += awq(
+            model_path, tokenizer, group_sizes=group_sizes, act_quant="no_act_quant"
+        )

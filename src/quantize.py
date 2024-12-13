@@ -99,8 +99,7 @@ def quantize_activation_per_group(t, n_bits=4, group_size=128):
 class WALinear(nn.Module):
     def __init__(
         self,
-        w_bits,
-        a_bits,
+        n_bits,
         in_features,
         out_features,
         bias=True,
@@ -109,8 +108,7 @@ class WALinear(nn.Module):
         quantize_output=False,
     ):
         super().__init__()
-        self.w_bits = w_bits
-        self.a_bits = a_bits
+        self.n_bits = n_bits
         self.in_features = in_features
         self.out_features = out_features
 
@@ -136,16 +134,16 @@ class WALinear(nn.Module):
         if act_quant == "per_token":
             self.act_quant_name = "per_token"
             self.act_quant = partial(
-                quantize_activation_per_token_absmax, n_bits=a_bits
+                quantize_activation_per_token_absmax, n_bits=n_bits
             )
         elif act_quant == "per_tensor":
             self.act_quant_name = "per_tensor"
             self.act_quant = partial(
-                quantize_activation_per_tensor_absmax, n_bits=a_bits
+                quantize_activation_per_tensor_absmax, n_bits=n_bits
             )
         elif act_quant == "per_group":
             self.act_quant_name = "per_group"
-            self.act_quant = partial(quantize_activation_per_group, n_bits=a_bits, group_size=a_group_size)
+            self.act_quant = partial(quantize_activation_per_group, n_bits=n_bits, group_size=a_group_size)
         elif act_quant == "no_act_quant":
             self.act_quant_name = "no_act_quant"
             self.act_quant = lambda x: x
@@ -175,8 +173,7 @@ class WALinear(nn.Module):
 
     @staticmethod
     def from_float(
-        w_bits,
-        a_bits,
+        n_bits,
         module,
         weight_quant="per_channel",
         act_quant="per_token",
@@ -185,8 +182,7 @@ class WALinear(nn.Module):
     ):
         assert isinstance(module, torch.nn.Linear)
         new_module = WALinear(
-            w_bits,
-            a_bits,
+            n_bits,
             module.in_features,
             module.out_features,
             module.bias is not None,
@@ -196,15 +192,15 @@ class WALinear(nn.Module):
         )
         if weight_quant == "per_channel":
             new_module.weight = quantize_weight_per_channel_absmax(
-                module.weight, n_bits=w_bits
+                module.weight, n_bits=n_bits
             )  # use 4-bit integer for weight
         elif weight_quant == "per_tensor":
             new_module.weight = quantize_weight_per_tensor_absmax(
-                module.weight, n_bits=w_bits
+                module.weight, n_bits=n_bits
             )
         elif weight_quant == "per_group" and group_size > 0:
             new_module.weight = pseudo_quantize_tensor(
-                module.weight, n_bit=w_bits, q_group_size=group_size
+                module.weight, n_bit=n_bits, q_group_size=group_size
             )
         else:
             raise ValueError(f"Invalid weight_quant: {weight_quant}")
@@ -219,8 +215,7 @@ class WALinear(nn.Module):
 
 def quantize(
     model,
-    w_bits,
-    a_bits,
+    n_bits,
     weight_quant="per_tensor",
     act_quant="per_tensor",
     quantize_bmm_input=True,
@@ -229,16 +224,14 @@ def quantize(
     for _, m in model.model.named_modules():
         if isinstance(m, OPTDecoderLayer):
             m.fc1 = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.fc1,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
                 group_size=group_size,
             )
             m.fc2 = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.fc2,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -248,8 +241,7 @@ def quantize(
             # Here we simulate quantizing BMM inputs by quantizing the
             # output of q_proj, k_proj, v_proj
             m.q_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.q_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -257,8 +249,7 @@ def quantize(
                 group_size=group_size,
             )
             m.k_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.k_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -266,8 +257,7 @@ def quantize(
                 group_size=group_size,
             )
             m.v_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.v_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -275,8 +265,7 @@ def quantize(
                 group_size=group_size,
             )
             m.out_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.out_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -284,24 +273,21 @@ def quantize(
             )
         elif isinstance(m, LlamaMLP):
             m.gate_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.gate_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
                 group_size=group_size,
             )
             m.up_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.up_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
                 group_size=group_size,
             )
             m.down_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.down_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -311,8 +297,7 @@ def quantize(
             # Here we simulate quantizing BMM inputs by quantizing the
             # output of q_proj, k_proj, v_proj
             m.q_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.q_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -320,8 +305,7 @@ def quantize(
                 group_size=group_size,
             )
             m.k_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.k_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -329,8 +313,7 @@ def quantize(
                 group_size=group_size,
             )
             m.v_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.v_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
@@ -338,16 +321,14 @@ def quantize(
                 group_size=group_size,
             )
             m.o_proj = WALinear.from_float(
-                w_bits,
-                a_bits,
+                n_bits,
                 m.o_proj,
                 weight_quant=weight_quant,
                 act_quant=act_quant,
                 group_size=group_size,
             )
     model.lm_head = WALinear.from_float(
-        w_bits,
-        a_bits,
+        n_bits,
         model.lm_head,
         weight_quant=weight_quant,
         act_quant=act_quant,
